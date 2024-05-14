@@ -1,59 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Propiedades de Tubería</title>
-  <script src="https://cdn.jsdelivr.net/npm/@gradio/core/dist/gradio.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/core/dist/gradio.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Propiedades de Tubería</title>
+    <script src="https://unpkg.com/@gradio/core"></script>
 </head>
 <body>
-  <div id="root"></div>
-  <script>
-    var iface = gr.Interface.create(
-      function (caudal, densidad, viscosidad, diametro, longitud_recta, metros_sobre_nivel_mar_1, metros_sobre_nivel_mar_2, eficiencia, precio_kwh, densidad_acero, precio_por_kg, diametro_externo, diametro_interno) {
-        var area_externa = 3.14159 * ((diametro_externo * 0.0254) ** 2) / 4;
-        var area_interna = 3.14159 * ((diametro_interno * 0.0254) ** 2) / 4;
-        var area_diferencia = area_externa - area_interna;
-        var velocidad = 0.001 * caudal / area_interna;
-        var reynolds = 25.4 * ((densidad * velocidad * diametro) / viscosidad);
-        var factor_friccion = 7;
-        var longitud_total = longitud_recta * 1000 * (1 + 0.05 * (diametro / 39.3701));
-        var perdidas_carga_friccion = (factor_friccion * (longitud_total / diametro) * (velocidad ** 2)) / 0.498348;
-        var presion_1 = 100 * 1013.25 * (1 - 0.0000225577 * metros_sobre_nivel_mar_1) ** 5.2559;
-        var presion_2 = 100 * 1013.25 * (1 - 0.0000225577 * metros_sobre_nivel_mar_2) ** 5.2559;
-        var caida_presion = (presion_2 - presion_1) / (1000 * 9.81) + perdidas_carga_friccion;
-        var deltap = 9.81 * densidad * caida_presion;
-        var BHP = 0.01 * caudal * deltap;
-        var HP = BHP / (746 * eficiencia);
-        var HP_kW = BHP / (1000 * eficiencia);
-        var consumo_energetico = HP_kW * 8760;
-        var costo_por_anno = consumo_energetico * precio_kwh;
-        var volumen_tuberia = area_diferencia * longitud_recta * 1000;
-        var masa_tuberia = volumen_tuberia * densidad_acero;
-        var precio_tuberia = masa_tuberia * precio_por_kg;
-        var costo_por_bombeo = consumo_energetico * precio_kwh;
-        var costo_total = precio_tuberia + costo_por_bombeo;
-        return "Área de la tubería interna: " + area_interna.toFixed(4) + " metros cuadrados.\nÁrea de la tubería externa: " + area_externa.toFixed(4) + " metros cuadrados.\nDiferencia de área: " + area_diferencia.toFixed(4) + " metros cuadrados.\nVelocidad en la tubería: " + velocidad.toFixed(2) + " m/s.\nNúmero de Reynolds: " + reynolds.toFixed(2) + ".\nFactor de fricción: " + factor_friccion.toFixed(4) + "\nLongitud total: " + longitud_total.toFixed(2) + " metros\nPérdidas de carga por fricción: " + perdidas_carga_friccion.toFixed(4) + "\nCaida de presión: " + caida_presion.toFixed(4) + " metros\nDeltap: " + deltap.toFixed(4) + " Pascales\nBHP (W): " + BHP.toFixed(4) + "\nHP (kW): " + HP_kW.toFixed(4) + "\nHP: " + HP.toFixed(4) + "\nConsumo energético: " + consumo_energetico.toFixed(4) + " kWh\nCosto por año: " + costo_por_anno.toFixed(4) + " MXN\nVolumen de la tubería: " + volumen_tuberia.toFixed(4) + " metros cúbicos\nMasa de la tubería: " + masa_tuberia.toFixed(4) + " kilogramos\nPrecio de la tubería: " + precio_tuberia.toFixed(4) + " MXN\nCosto por bombeo: " + costo_por_bombeo.toFixed(4) + " MXN\nCosto total de la tubería: " + costo_total.toFixed(4) + " MXN";
-      },
-      [
-        gr.inputs.Number(name="Caudal (litros/segundo)"),
-        gr.inputs.Number(name="Densidad (kg/m³)"),
-        gr.inputs.Number(name="Viscosidad (cP)"),
-        gr.inputs.Number(name="Diámetro de la tubería interna (metros)"),
-        gr.inputs.Number(name="Longitud recta (kilómetros)"),
-        gr.inputs.Number(name="Metros sobre el nivel del mar (1)"),
-        gr.inputs.Number(name="Metros sobre el nivel del mar (2)"),
-        gr.inputs.Number(name="Eficiencia (%)"),
-        gr.inputs.Number(name="Precio del kWh (MXN)"),
-        gr.inputs.Number(name="Densidad del acero (kg/m³)"),
-        gr.inputs.Number(name="Precio por kg de la tubería (MXN)"),
-        gr.inputs.Number(name="Diámetro externo (metros)"),
-        gr.inputs.Number(name="Diámetro interno (metros)")
-      ],
-      gr.outputs.Textbox()
-    );
-    iface.launch("#root");
-  </script>
+    <div id="my_interface"></div>
+    <script>
+        const iface = gr.Interface({
+            "fn": function(caudal, densidad, viscosidad, diametro, longitud_recta, metros_sobre_nivel_mar_1, metros_sobre_nivel_mar_2, eficiencia, precio_kwh, densidad_acero, precio_por_kg, diametro_externo, diametro_interno) {
+                const area_externa = calcular_area_tuberia(diametro_externo);
+                const area_interna = calcular_area_tuberia(diametro_interno);
+                const area_diferencia = area_externa - area_interna;
+                const velocidad = calcular_velocidad(caudal, diametro);
+                const reynolds = calcular_reynolds(densidad, viscosidad, velocidad, diametro);
+                const factor_friccion = calcular_factor_friccion(diametro, reynolds);
+                const longitud_total = calcular_longitud_total(longitud_recta, diametro);
+                const perdidas_carga_friccion = calcular_perdidas_carga_friccion(factor_friccion, longitud_total, diametro, velocidad);
+                const caida_presion = calcular_caida_presion(metros_sobre_nivel_mar_1, metros_sobre_nivel_mar_2, perdidas_carga_friccion);
+                const deltap = calcular_deltap(densidad, metros_sobre_nivel_mar_1, metros_sobre_nivel_mar_2, perdidas_carga_friccion);
+                const BHP = calcular_BHP(caudal, deltap);
+                const HP = calcular_HP(BHP, eficiencia);
+                const HP_kW = calcular_HP_kW(BHP, eficiencia);
+                const consumo_energetico = calcular_consumo_energetico(HP_kW);
+                const costo_por_anno = calcular_costo_por_anno(consumo_energetico, precio_kwh);
+                const volumen_tuberia = calcular_volumen(area_diferencia, longitud_recta);
+                const masa_tuberia = calcular_masa_tuberia(volumen_tuberia, densidad_acero);
+                const precio_tuberia = calcular_precio_tuberia(masa_tuberia, precio_por_kg);
+                const costo_por_bombeo = calcular_costo_por_bombeo(consumo_energetico, precio_kwh);
+                const costo_total = calcular_costo_total(precio_tuberia, costo_por_bombeo);
+
+                return `Área de la tubería interna: ${area_interna.toFixed(4)} metros cuadrados.\nÁrea de la tubería externa: ${area_externa.toFixed(4)} metros cuadrados.\nDiferencia de área: ${area_diferencia.toFixed(4)} metros cuadrados.\nVelocidad en la tubería: ${velocidad.toFixed(2)} m/s.\nNúmero de Reynolds: ${reynolds.toFixed(2)}.\nFactor de fricción: ${factor_friccion.toFixed(4)}\nLongitud total: ${longitud_total.toFixed(2)} metros\nPérdidas de carga por fricción: ${perdidas_carga_friccion.toFixed(4)}\nCaida de presión: ${caida_presion.toFixed(4)} metros\nDeltap: ${deltap.toFixed(4)} Pascales\nBHP (W): ${BHP.toFixed(4)}\nHP (kW): ${HP_kW.toFixed(4)}\nHP: ${HP.toFixed(4)}\nConsumo energético: ${consumo_energetico.toFixed(4)} kWh\nCosto por año: ${costo_por_anno.toFixed(4)} MXN\nVolumen de la tubería: ${volumen_tuberia.toFixed(4)} metros cúbicos\nMasa de la tubería: ${masa_tuberia.toFixed(4)} kilogramos\nPrecio de la tubería: ${precio_tuberia.toFixed(4)} MXN\nCosto por bombeo: ${costo_por_bombeo.toFixed(4)} MXN\nCosto total de la tubería: ${costo_total.toFixed(4)} MXN`;
+            },
+            "inputs": ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+            "outputs": "text",
+            "title": "Calculadora de Propiedades de Tubería",
+            "description": "Ingresa el caudal (litros/segundo), la densidad (kg/m³), la viscosidad (cP), el diámetro de la tubería interna (metros), la longitud recta (kilómetros), los metros sobre el nivel del mar (1), los metros sobre el nivel del mar (2), la eficiencia (%) y el precio del kWh para calcular el área, la velocidad, el número de Reynolds, el factor de fricción, la longitud total, las pérdidas de carga por fricción, la caída de presión, deltap, BHP (W), el consumo energético, el costo por año, el volumen de la tubería, la masa de la tubería y el precio de la tubería. Además, proporciona la densidad del acero, el diámetro externo y el diámetro interno de la tubería, y el precio por kilogramo de la tubería."
+        });
+
+        iface.mount(document.getElementById("my_interface"));
+    </script>
 </body>
 </html>
